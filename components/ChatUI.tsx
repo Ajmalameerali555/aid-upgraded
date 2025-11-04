@@ -132,43 +132,34 @@ const Sidebar: React.FC<{
             const lastMessageTime = lastMessage ? new Date(lastMessage.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
             
             return (
-              <button key={id} onClick={() => onSessionSelect(id)} title={session.title} className={`w-full text-left sidebar-item ${id === currentSessionId ? 'bg-white/10' : ''}`}>
-                {isExpanded ? (
-                    <>
-                        <div className="text-sm truncate" dangerouslySetInnerHTML={{ __html: titleHTML }}/>
-                        {searchFilter ? 
-                            ( snippetHTML && <div className="text-[11px] text-gray-400 mt-1 truncate" dangerouslySetInnerHTML={{ __html: `...${snippetHTML}...` }} /> ) 
-                            : (
-                                <div className="flex items-baseline justify-between mt-1">
-                                    <div className="text-[11px] text-gray-400 truncate pr-2">{lastMessageSnippet}</div>
-                                    <div className="text-[10px] text-gray-500 flex-shrink-0">{lastMessageTime}</div>
-                                </div>
-                            )
-                        }
-                    </>
-                ) : ( <div className="text-sm truncate">{session.title.charAt(0)}</div> )}
+              <button key={id} onClick={() => onSessionSelect(id)} title={session.title} className={`w-full text-left p-2 rounded-md transition-colors ${id === currentSessionId ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                    <div className="text-sm truncate font-medium" dangerouslySetInnerHTML={{ __html: titleHTML }}/>
+                    {searchFilter ? 
+                        ( snippetHTML && <div className="text-[11px] text-gray-400 mt-1 truncate" dangerouslySetInnerHTML={{ __html: `...${snippetHTML}...` }} /> ) 
+                        : (
+                            <div className="flex items-baseline justify-between mt-1">
+                                <div className="text-xs text-gray-400 truncate pr-2">{lastMessageSnippet}</div>
+                                <div className="text-[10px] text-gray-500 flex-shrink-0">{lastMessageTime}</div>
+                            </div>
+                        )
+                    }
               </button>
             )
         });
     };
 
     return (
-        <aside className="sidebar glass h-full px-3 py-3 flex flex-col">
-            <div className="flex-shrink-0">
-                <div onClick={() => setExpanded(!isExpanded)} className="sidebar-item flex items-center gap-2 cursor-pointer select-none">
-                    <div className="size-7 rounded-md bg-white/10 border border-white/20 grid place-items-center flex-shrink-0"><ClockIcon /></div>
-                    <div className="overflow-hidden whitespace-nowrap">
-                        <div className="text-xs text-gray-400">Now</div>
-                        <div className="text-sm">{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-                    </div>
-                </div>
-                <div className="mt-2 space-y-2">
-                    <button onClick={onNewSession} className="sidebar-item w-full text-left flex items-center gap-2"><span className="text-lg">+</span> <span className={`${!isExpanded && 'hidden'}`}>New chat</span></button>
-                    <div className="sidebar-item"><input value={searchFilter} onChange={e => setSearchFilter(e.target.value)} className={`w-full bg-transparent placeholder-gray-400 outline-none text-sm ${!isExpanded && 'hidden'}`} placeholder="Search all chats..."/></div>
+        <aside className="sidebar glass h-full px-3 py-3 flex flex-col border-r border-white/10">
+            <div className="flex-shrink-0 flex flex-col gap-2">
+                <button onClick={onNewSession} className="w-full text-left flex items-center gap-2 p-2 rounded-md transition-colors hover:bg-white/5 bg-white/5 border border-white/10">
+                    <span className="text-lg">+</span> <span>New chat</span>
+                </button>
+                <div className="relative">
+                    <input value={searchFilter} onChange={e => setSearchFilter(e.target.value)} className={`w-full bg-white/5 border border-white/10 rounded-md p-2 placeholder-gray-400 outline-none text-sm focus:border-purple-400`} placeholder="Search all chats..."/>
                 </div>
             </div>
-            <div className={`mt-2 text-xs uppercase tracking-widest text-gray-500 px-1 ${!isExpanded && 'hidden'}`}>History</div>
-            <div className="mt-2 space-y-1 overflow-y-auto flex-1">
+            <div className={`mt-3 text-xs uppercase tracking-widest text-gray-500 px-1`}>History</div>
+            <div className="mt-2 space-y-1 overflow-y-auto flex-1 pr-1">
                 {renderSessionList()}
             </div>
         </aside>
@@ -176,14 +167,14 @@ const Sidebar: React.FC<{
 };
 
 const ChatHeader: React.FC<{
-    session: ChatSession | null;
     authStatus: userService.AuthStatus;
     userName: string | null;
     onClose: () => void;
     onPersonaChange: (persona: Persona) => void;
     onLogout: () => void;
     onClearHistory: () => void;
-}> = ({ session, authStatus, userName, onClose, onPersonaChange, onLogout, onClearHistory }) => {
+    onToggleSidebar: () => void;
+}> = ({ authStatus, userName, onClose, onPersonaChange, onLogout, onClearHistory, onToggleSidebar }) => {
     const [isPopoverVisible, setPopoverVisible] = useState(false);
     const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -198,17 +189,20 @@ const ChatHeader: React.FC<{
     }, []);
 
     return (
-        <div className="glass px-4 py-3 flex items-center justify-between">
+        <div className="glass px-4 py-3 flex items-center justify-between border-b border-white/10">
             <div className="flex items-center gap-3">
+                 <button onClick={onToggleSidebar} className="icon-btn md:hidden" title="Toggle Sidebar">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
                 <img src="https://res.cloudinary.com/da7ivvsdj/image/upload/v1762264232/lgo_kzhywq.png" alt="AIDLEX.AE Logo" className="size-7" />
                 <div>
                     <div className="text-sm font-semibold">AIDLEX Assistant</div>
-                    <div className="text-xs text-gray-400">{session?.meta?.code ? LABELS[session.meta.code] : 'UAE‑centric • AR/EN'}</div>
+                    <div className="text-xs text-gray-400">UAE‑centric • AR/EN</div>
                 </div>
             </div>
             <div className="flex items-center gap-2">
                 {authStatus === 'authenticated' && userName && (
-                    <div className="flex items-center gap-2 pill px-3 py-1.5 text-sm">
+                    <div className="hidden sm:flex items-center gap-2 pill px-3 py-1.5 text-sm">
                         <UserIcon/>
                         <span>{userName}</span>
                     </div>
@@ -218,15 +212,7 @@ const ChatHeader: React.FC<{
                     <button onClick={() => setPopoverVisible(v => !v)} className="icon-btn" title="Settings & Actions"><SettingsIcon /></button>
                     {isPopoverVisible && (
                         <div className="absolute top-full right-0 mt-2 w-56 bg-gray-900/90 border border-white/20 rounded-lg shadow-xl p-2 z-10 backdrop-blur-sm">
-                            {session?.meta?.code !== 'research' && session?.meta?.code !== 'research-web' && (
-                                <>
-                                    <div className="px-3 pt-1 pb-2 text-xs text-gray-400">Persona</div>
-                                    {Object.entries(PERSONAS).map(([key, { name }]) => (
-                                        <button key={key} onClick={() => { onPersonaChange(key as Persona); setPopoverVisible(false); }} className={`w-full text-left px-3 py-2 text-sm rounded-md hover:bg-white/10 ${session?.meta?.persona === key ? 'bg-white/15' : ''}`}>{name}</button>
-                                    ))}
-                                    <div className="my-2 border-t border-white/10"></div>
-                                </>
-                            )}
+                           
                             <div className="px-3 pt-1 pb-2 text-xs text-gray-400">Account Actions</div>
                             <button onClick={() => { onClearHistory(); setPopoverVisible(false); }} className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-red-500/20 text-red-400 flex items-center gap-2">
                                 <TrashIcon /> Clear All History
@@ -261,14 +247,19 @@ const MessageStream: React.FC<{
     onRetry: (prompt: string) => void;
 }> = (props) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (containerRef.current) {
+            // More reliable scrolling by directly manipulating scroll position
+            containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        }
     }, [props.messages, props.isThinking]);
 
     const lastMessage = props.messages[props.messages.length - 1];
 
     return (
-        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-4">
+        <div ref={containerRef} className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-4">
             {props.messages.map((msg) => {
               if (msg.messageType === 'wizard') {
                 return <ClauseSwapWizard key={msg.ts} templateContent={msg.content} onFinalize={(finalContent) => props.onFinalizeWizard(msg.ts, finalContent)} />;
@@ -431,7 +422,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
   const [currentSessionId, setCurrentIdState] = useState<string | null>(initialSessionId);
   const [composerValue, setComposerValue] = useState('');
   const [isThinking, setIsThinking] = useState(false);
-  const [isSidebarExpanded, setSidebarExpanded] = useState(true);
+  const [isSidebarOpen, setSidebarOpen] = useState(window.innerWidth > 768);
   const [isMicRecording, setMicRecording] = useState(false);
   const [speakingMessageTs, setSpeakingMessageTs] = useState<number | null>(null);
   const [copiedMessageTs, setCopiedMessageTs] = useState<number | null>(null);
@@ -448,8 +439,17 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
 
   const currentSession = currentSessionId ? sessions[currentSessionId] : null;
   
-  // OPTIMIZATION: This useEffect now only runs once to set up the recognition engine.
-  // The dependency on composerValue has been removed to prevent re-initialization on every keystroke.
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+        if (event.key === 'aidlex_chats' || event.key === 'aidlex_chat_order') {
+            setSessions(sessionService.loadSessions());
+            setSessionOrder(sessionService.loadOrder());
+        }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   useEffect(() => {
     // --- Speech Synthesis Voice Loading ---
     const loadVoices = () => { voicesRef.current = window.speechSynthesis.getVoices(); };
@@ -469,12 +469,10 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
     let final_transcript = '';
 
     recognition.onstart = () => {
-        // Use the ref to get the most up-to-date composer value when starting.
         final_transcript = composerValueRef.current;
     };
     recognition.onresult = (event: any) => {
         let interim_transcript = '';
-        // Reset final transcript from the last known good state before this result event
         let current_final = final_transcript;
         for (let i = event.resultIndex; i < event.results.length; ++i) {
             if (event.results[i].isFinal) {
@@ -483,7 +481,6 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
                 interim_transcript += event.results[i][0].transcript;
             }
         }
-        // Update the state with the combined result
         setComposerValue(current_final + interim_transcript);
     };
     
@@ -503,7 +500,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
         speechRecognitionRef.current.stop();
       }
     };
-  }, []); // Empty dependency array is the key fix.
+  }, []);
   
   const updateSessionState = (session: ChatSession) => {
     const newSessions = sessionService.saveSessionsAndReturn(session);
@@ -521,6 +518,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
   const handleSessionSelect = (id: string) => {
     setCurrentIdState(id);
     sessionService.setCurrentSessionId(id);
+    if(window.innerWidth <= 768) setSidebarOpen(false);
   };
   
   const handlePersonaChange = (persona: Persona) => {
@@ -730,10 +728,11 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
 
   return (
     <section className="fixed inset-0 z-30">
-      <div className={`chat-wrap h-full ${isSidebarExpanded ? 'expanded' : ''}`}>
+      <div className={`chat-wrap h-full ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+        {isSidebarOpen && <div className="sidebar-backdrop md:hidden" onClick={() => setSidebarOpen(false)}></div>}
         <Sidebar
-            isExpanded={isSidebarExpanded}
-            setExpanded={setSidebarExpanded}
+            isExpanded={true}
+            setExpanded={() => {}}
             sessions={sessions}
             sessionOrder={sessionOrder}
             currentSessionId={currentSessionId}
@@ -743,13 +742,13 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
 
         <div className="flex flex-col h-full bg-black/20">
           <ChatHeader
-            session={currentSession}
             authStatus={authStatus}
             userName={userName}
             onClose={onClose}
             onPersonaChange={handlePersonaChange}
             onLogout={handleLogout}
             onClearHistory={handleClearHistory}
+            onToggleSidebar={() => setSidebarOpen(v => !v)}
           />
           {currentSession && (
               <MessageStream

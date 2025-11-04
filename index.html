@@ -26,10 +26,27 @@
     body{
       margin: 0;
       background-color: #0f0f0f;
-      overflow: hidden;
+      /* removed overflow: hidden to fix scrolling on mobile/zoom */
       color: var(--fg);
       font-family: 'Segoe UI','Roboto',system-ui,-apple-system,sans-serif;
     }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #333; /* ash gray */
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #444;
+    }
+
 
     /* Surfaces */
     .pill{ background:var(--pill-bg); border:1px solid var(--pill-border) }
@@ -79,12 +96,40 @@
     }
 
     /* Chat layout */
-    .chat-wrap{ display:grid; grid-template-columns: 64px 1fr; }
-    .chat-wrap.expanded{ grid-template-columns: 260px 1fr; }
-    .sidebar{ transition: width .2s ease; width:64px; overflow:hidden }
-    .expanded .sidebar{ width:260px }
-    .sidebar-item{ border-radius:.6rem; padding:.6rem .75rem; transition: background .2s }
-    .sidebar-item:hover{ background: rgba(255,255,255,.08) }
+    .chat-wrap{ display:grid; grid-template-columns: 260px 1fr; }
+    .sidebar{ transition: width .2s ease; width: 260px; overflow:hidden }
+
+    /* Mobile Sidebar Overlay */
+    @media (max-width: 768px) {
+        .chat-wrap { grid-template-columns: 1fr; }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 40;
+            width: 260px;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .chat-wrap.sidebar-open .sidebar {
+            transform: translateX(0);
+        }
+        .sidebar-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 39;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .chat-wrap.sidebar-open .sidebar-backdrop {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    }
+
 
     /* Chat bubbles */
     .msg{ max-width: 72ch }
