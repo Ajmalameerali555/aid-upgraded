@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AIDLEX.AE</title>
+
+  <!-- Tailwind + tsParticles -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.11.1/tsparticles.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+
+
+  <style>
+    :root{
+      --fg:#f0f0f0;
+      --muted:#a3a3a3;
+      --glass-bg: rgba(255,255,255,.05);
+      --glass-border: rgba(255,255,255,.12);
+      --pill-bg: rgba(255,255,255,.07);
+      --pill-border: rgba(255,255,255,.15);
+    }
+
+    /* Base scale tightened (fix "zoomed" look) */
+    html{ font-size: 15px; }
+    body{
+      margin: 0;
+      background-color: #0f0f0f;
+      overflow: hidden;
+      color: var(--fg);
+      font-family: 'Segoe UI','Roboto',system-ui,-apple-system,sans-serif;
+    }
+
+    /* Surfaces */
+    .pill{ background:var(--pill-bg); border:1px solid var(--pill-border) }
+    .glass{ background:var(--glass-bg); border:1px solid var(--glass-border); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px) }
+    .input{ background:rgba(255,255,255,.06); border:1px solid var(--glass-border) }
+    mark { background-color: rgba(255, 255, 255, 0.1); color: inherit; border-radius: 3px; padding: 0 2px; }
+
+    /* Buttons */
+    .btn{ padding:.8rem 1rem; border-radius:.8rem; font-weight:600; transition: transform .1s, box-shadow .2s, background .2s, color .2s }
+    .btn:active{ transform: scale(.98) }
+    .btn-primary{ background:#fff; color:#000 }
+    .btn-primary:hover{ box-shadow:0 8px 22px rgba(255,255,255,.18) }
+    .btn-ghost{ background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15); color:#fff }
+    .btn-ghost:hover{ background: rgba(255,255,255,.14) }
+    .btn-link{ font-weight:600; opacity:.9 }
+    .btn-link:hover{ opacity:1; text-decoration:underline }
+    
+    .icon-btn{ width:38px; height:38px; border:1px solid rgba(255,255,255,.15); border-radius:.6rem; display:grid; place-items:center; transition: background .2s; }
+    .icon-btn:hover{ background:rgba(255,255,255,.12) }
+    .icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    /* Accessibility focus rings */
+    *:focus-visible { outline: 2px solid #a78bfa; outline-offset: 2px; border-radius: 4px; }
+    textarea:focus-visible, input:focus-visible { outline: none; }
+    .input:focus-within, .composer:focus-within { border-color: rgba(167, 139, 250, 0.6); }
+
+    /* Typewriter with caret */
+    .typewriter h1{
+      overflow:hidden; white-space:nowrap; margin:0 auto; letter-spacing:.12em;
+      border-right:2px solid rgba(255,255,255,.85); display:inline-block;
+      animation: typing 2.6s steps(30,end) forwards, caret 1s step-end infinite 2.6s;
+    }
+    @keyframes typing{ from{width:0} to{width:100%} }
+    @keyframes caret{ 50%{ border-color: transparent } }
+
+    .fade-in{ opacity:0; animation:fadeIn .9s ease forwards }
+    @keyframes fadeIn{ to{ opacity:1 } }
+
+    .service-card{ transition: transform .18s, box-shadow .18s }
+    .service-card:hover{ transform: translateY(-2px); box-shadow:0 10px 30px rgba(0,0,0,.35) }
+
+    .glow{
+      position:absolute; inset:auto auto 10% -10%;
+      width:60vw; height:60vw; pointer-events:none;
+      background: radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.04), transparent 70%);
+      filter: blur(40px); transform: rotate(-12deg);
+    }
+
+    /* Chat layout */
+    .chat-wrap{ display:grid; grid-template-columns: 64px 1fr; }
+    .chat-wrap.expanded{ grid-template-columns: 260px 1fr; }
+    .sidebar{ transition: width .2s ease; width:64px; overflow:hidden }
+    .expanded .sidebar{ width:260px }
+    .sidebar-item{ border-radius:.6rem; padding:.6rem .75rem; transition: background .2s }
+    .sidebar-item:hover{ background: rgba(255,255,255,.08) }
+
+    /* Chat bubbles */
+    .msg{ max-width: 72ch }
+    .msg-user{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12) }
+    .msg-bot{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12) }
+    .msg-error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    /* Research Brief component */
+    .research-brief{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12) }
+    .research-point { border-top: 1px solid rgba(255,255,255,.1); }
+    .label-verified { color: #4ade80; } /* green-400 */
+    .label-inferred { color: #facc15; } /* yellow-400 */
+    .label-unverified { color: #f87171; } /* red-400 */
+    .cite-link { color: #a78bfa; text-decoration: none; } /* violet-400 */
+    .cite-link:hover { text-decoration: underline; }
+
+    /* Animated message entry */
+    .msg-animated {
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeInUp .3s ease forwards;
+    }
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Thinking animation (3 dots) */
+    .thinking{ display:inline-flex; gap:.25rem; }
+    .thinking span{
+      width:.35rem; height:.35rem; border-radius:999px; background:#cfcfcf; opacity:.6;
+      animation: blink 1.2s infinite ease-in-out;
+    }
+    .thinking span:nth-child(2){ animation-delay:.15s }
+    .thinking span:nth-child(3){ animation-delay:.3s }
+    @keyframes blink{ 0%,80%,100%{ transform:scale(0.6); opacity:.5 } 40%{ transform:scale(1); opacity:1 } }
+
+    /* Composer */
+    .composer{ border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.04) }
+
+    /* Mic recording animation */
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+    }
+    .mic-recording {
+      background-color: rgba(239, 68, 68, 0.3); /* red-500/30 */
+      animation: pulse-red 1.75s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      .typewriter h1, .fade-in, .msg-animated, .service-card { animation:none !important; opacity:1 !important; transform: none !important; }
+    }
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
+    "dayjs": "https://aistudiocdn.com/dayjs@^1.11.19"
+  }
+}
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="relative">
+  <div id="tsparticles" class="absolute inset-0 -z-10 pointer-events-none"></div>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('load', () => {
+      if (window.tsParticles) {
+        tsParticles.load("tsparticles", {
+          background: { color: "#0f0f0f" },
+          particles: {
+            number: { value: 60 },
+            size: { value: 2 },
+            color: { value: "#ffffff" },
+            opacity: { value: 0.2 },
+            move: { enable: true, speed: 0.6 },
+            links: {
+              enable: true,
+              distance: 140,
+              color: "#ffffff",
+              opacity: 0.1
+            }
+          },
+          interactivity: {
+            events: {
+              onhover: { enable: true, mode: "repulse" }
+            }
+          },
+          fullScreen: { enable: false }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
