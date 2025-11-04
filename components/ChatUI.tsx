@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChatSession, ChatMessage, ServiceCode, Persona, Source, ResearchBundle } from '../types';
 import { LABELS, PERSONAS } from '../constants';
-import { getChatResponse, getResearchBrief } from '../services/geminiService';
+import { getChatResponse, getResearchBrief, getGroundedResponse } from '../services/geminiService';
 import * as sessionService from '../services/sessionService';
 import * as userService from '../services/userService';
-import { ClockIcon, MicIcon, SendIcon, SettingsIcon, PlayIcon, StopIcon, CopyIcon, CheckIcon, UserIcon, TrashIcon, LogoutIcon, ErrorIcon, RetryIcon } from './Icons';
+import { ClockIcon, MicIcon, SendIcon, SettingsIcon, PlayIcon, StopIcon, CopyIcon, CheckIcon, UserIcon, TrashIcon, LogoutIcon, ErrorIcon, RetryIcon, PaperclipIcon } from './Icons';
 import ClauseSwapWizard from './ClauseSwapWizard';
 import AuthPrompt from './AuthPrompt';
 import ResearchBrief from './ResearchBrief';
@@ -65,6 +65,17 @@ const decodeJwt = (token: string) => {
     }
 };
 
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            const result = (reader.result as string).split(',')[1];
+            resolve(result);
+        };
+        reader.onerror = error => reject(error);
+    });
+};
 
 // =================================================================================
 // SUB-COMPONENTS
@@ -105,6 +116,7 @@ const Sidebar: React.FC<{
                 }
                 return { id, score, session, matchSnippet };
             })
+            // FIX: Corrected the type predicate to match the object shape returned by `.map()`.
             .filter((item): item is { id: string; score: number; session: ChatSession; matchSnippet: string | null } => item !== null && item.score > 0)
             .sort((a, b) => b.score - a.score);
 
@@ -115,12 +127,24 @@ const Sidebar: React.FC<{
             let snippetHTML: string | null = matchSnippet ? highlightMatches(matchSnippet, searchTerm) : null;
             if (searchTerm && session.title.toLowerCase().includes(searchTerm.toLowerCase())){ titleHTML = highlightMatches(session.title, searchTerm); }
             
+            const lastMessage = session.messages[session.messages.length - 1];
+            const lastMessageSnippet = lastMessage ? (lastMessage.role === 'user' ? 'You: ' : '') + lastMessage.content.substring(0, 30) + (lastMessage.content.length > 30 ? '…' : '') : 'No messages yet';
+            const lastMessageTime = lastMessage ? new Date(lastMessage.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            
             return (
               <button key={id} onClick={() => onSessionSelect(id)} title={session.title} className={`w-full text-left sidebar-item ${id === currentSessionId ? 'bg-white/10' : ''}`}>
                 {isExpanded ? (
                     <>
                         <div className="text-sm truncate" dangerouslySetInnerHTML={{ __html: titleHTML }}/>
-                        {snippetHTML ? ( <div className="text-[11px] text-gray-400 mt-1 truncate" dangerouslySetInnerHTML={{ __html: `...${snippetHTML}...` }} /> ) : ( <div className="text-[11px] text-gray-500">{new Date(session.createdAt).toLocaleDateString()}</div> )}
+                        {searchFilter ? 
+                            ( snippetHTML && <div className="text-[11px] text-gray-400 mt-1 truncate" dangerouslySetInnerHTML={{ __html: `...${snippetHTML}...` }} /> ) 
+                            : (
+                                <div className="flex items-baseline justify-between mt-1">
+                                    <div className="text-[11px] text-gray-400 truncate pr-2">{lastMessageSnippet}</div>
+                                    <div className="text-[10px] text-gray-500 flex-shrink-0">{lastMessageTime}</div>
+                                </div>
+                            )
+                        }
                     </>
                 ) : ( <div className="text-sm truncate">{session.title.charAt(0)}</div> )}
               </button>
@@ -176,10 +200,10 @@ const ChatHeader: React.FC<{
     return (
         <div className="glass px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-                <div className="size-7 rounded-md bg-white/10 border border-white/20"></div>
+                <img src="https://res.cloudinary.com/da7ivvsdj/image/upload/v1762264232/lgo_kzhywq.png" alt="AIDLEX.AE Logo" className="size-7" />
                 <div>
                     <div className="text-sm font-semibold">AIDLEX Assistant</div>
-                    <div className="text-xs text-gray-400">{session?.meta?.code === 'research' ? 'Legal Research Assistant' : (session?.meta?.persona ? PERSONAS[session.meta.persona].name : 'UAE‑centric • AR/EN')}</div>
+                    <div className="text-xs text-gray-400">{session?.meta?.code ? LABELS[session.meta.code] : 'UAE‑centric • AR/EN'}</div>
                 </div>
             </div>
             <div className="flex items-center gap-2">
@@ -194,7 +218,7 @@ const ChatHeader: React.FC<{
                     <button onClick={() => setPopoverVisible(v => !v)} className="icon-btn" title="Settings & Actions"><SettingsIcon /></button>
                     {isPopoverVisible && (
                         <div className="absolute top-full right-0 mt-2 w-56 bg-gray-900/90 border border-white/20 rounded-lg shadow-xl p-2 z-10 backdrop-blur-sm">
-                            {session?.meta?.code !== 'research' && (
+                            {session?.meta?.code !== 'research' && session?.meta?.code !== 'research-web' && (
                                 <>
                                     <div className="px-3 pt-1 pb-2 text-xs text-gray-400">Persona</div>
                                     {Object.entries(PERSONAS).map(([key, { name }]) => (
@@ -265,11 +289,28 @@ const MessageStream: React.FC<{
                             </div>
                         )}
                         <div dangerouslySetInnerHTML={{ __html: mdToHTML(msg.content) }} />
+                        {msg.fileData && (
+                            <div className="mt-2 pt-2 border-t border-white/10 flex items-center gap-2 text-xs text-gray-400">
+                                <PaperclipIcon /> <span>Attached: {msg.fileData.name}</span>
+                            </div>
+                        )}
+                        {msg.sources && msg.sources.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-white/10">
+                                <h4 className="text-xs font-semibold text-gray-300 mb-1">Sources:</h4>
+                                <ol className="list-decimal list-inside space-y-1 text-xs">
+                                    {msg.sources.map((source, idx) => (
+                                        <li key={idx}>
+                                            <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">{source.title}</a>
+                                        </li>
+                                    ))}
+                                </ol>
+                            </div>
+                        )}
                     </div>
                     <div className="mt-2 flex items-center gap-2">
                         {msg.role === 'model' && msg.messageType === 'standard' && !msg.error && (
                             <>
-                               <button onClick={() => props.onSpeak(msg.content, msg.ts)} className="icon-btn !size-7" title={props.speakingMessageTs === msg.ts ? "Stop" : "Read aloud"}>
+                               <button onClick={() => props.onSpeak(msg.content, msg.ts)} className="icon-btn !size-7" title="Read aloud">
                                  {props.speakingMessageTs === msg.ts ? <StopIcon/> : <PlayIcon/>}
                                </button>
                                <button onClick={() => props.onCopy(msg.content, msg.ts)} className="icon-btn !size-7" title="Copy text">
@@ -314,8 +355,13 @@ const Composer: React.FC<{
     isMicRecording: boolean;
     onMicClick: () => void;
     micDisabled: boolean;
-}> = ({ value, onValueChange, onSend, isThinking, isMicRecording, onMicClick, micDisabled }) => {
+    attachedFile: File | null;
+    onFileAttach: (file: File) => void;
+    onFileRemove: () => void;
+}> = ({ value, onValueChange, onSend, isThinking, isMicRecording, onMicClick, micDisabled, attachedFile, onFileAttach, onFileRemove }) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     useEffect(() => {
         textareaRef.current?.focus();
     }, []);
@@ -336,21 +382,38 @@ const Composer: React.FC<{
         }, 0);
     };
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            onFileAttach(e.target.files[0]);
+        }
+    };
+
     return (
         <div className="px-4 md:px-8 py-4">
+            {attachedFile && (
+                <div className="mb-2 flex items-center justify-between text-sm pill px-3 py-1.5">
+                    <div className="flex items-center gap-2 truncate">
+                        <PaperclipIcon />
+                        <span className="truncate">{attachedFile.name}</span>
+                    </div>
+                    <button onClick={onFileRemove} className="text-gray-400 hover:text-white text-lg leading-none">&times;</button>
+                </div>
+            )}
             <div className="composer rounded-xl px-3 py-2 flex items-end gap-2">
+                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".pdf,.txt,.docx" />
+                <button onClick={() => fileInputRef.current?.click()} className="icon-btn mb-1" title="Attach document"><PaperclipIcon /></button>
                 <textarea
                     ref={textareaRef}
                     rows={1}
                     className="flex-1 bg-transparent outline-none resize-none text-[0.95rem] leading-6 max-h-44 placeholder-gray-400"
-                    placeholder="Type a message..."
+                    placeholder="Type a message, or attach a document..."
                     value={value}
                     onChange={handleInput}
                     onKeyDown={handleKeyDown}
                 />
                 <div className="flex items-center gap-2 pb-1">
                     <button onClick={onMicClick} className={`icon-btn ${isMicRecording ? 'mic-recording' : ''}`} title="Voice to text" disabled={micDisabled}><MicIcon /></button>
-                    <button onClick={onSend} className="icon-btn bg-white text-black hover:bg-white" title="Send" disabled={isThinking || !value.trim()}><SendIcon /></button>
+                    <button onClick={onSend} className="icon-btn bg-white text-black hover:bg-white" title="Send" disabled={isThinking || (!value.trim() && !attachedFile)}><SendIcon /></button>
                 </div>
             </div>
             <div className="mt-2 text-[11px] text-gray-500">Press Enter to send • Shift+Enter for new line</div>
@@ -374,13 +437,19 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
   const [copiedMessageTs, setCopiedMessageTs] = useState<number | null>(null);
   const [userName, setUserName] = useState<string | null>(userService.getUserName());
   const [authStatus, setAuthStatus] = useState<userService.AuthStatus>(userService.getAuthStatus());
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
   
   const speechRecognitionRef = useRef<any>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
-  const lastFinalTranscriptRef = useRef('');
+  const composerValueRef = useRef(composerValue);
+  useEffect(() => {
+    composerValueRef.current = composerValue;
+  }, [composerValue]);
 
   const currentSession = currentSessionId ? sessions[currentSessionId] : null;
   
+  // OPTIMIZATION: This useEffect now only runs once to set up the recognition engine.
+  // The dependency on composerValue has been removed to prevent re-initialization on every keystroke.
   useEffect(() => {
     // --- Speech Synthesis Voice Loading ---
     const loadVoices = () => { voicesRef.current = window.speechSynthesis.getVoices(); };
@@ -388,38 +457,45 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
     window.speechSynthesis.onvoiceschanged = loadVoices;
 
     // --- Speech Recognition Setup ---
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+        console.warn("Speech recognition not supported by this browser.");
+        return;
+    }
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    let final_transcript = '';
 
-      recognition.onstart = () => {
-        lastFinalTranscriptRef.current = composerValue;
-      };
-      recognition.onresult = (event: any) => {
-        let interimTranscript = '';
-        let finalTranscript = lastFinalTranscriptRef.current;
+    recognition.onstart = () => {
+        // Use the ref to get the most up-to-date composer value when starting.
+        final_transcript = composerValueRef.current;
+    };
+    recognition.onresult = (event: any) => {
+        let interim_transcript = '';
+        // Reset final transcript from the last known good state before this result event
+        let current_final = final_transcript;
         for (let i = event.resultIndex; i < event.results.length; ++i) {
             if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript + ' ';
+                current_final += event.results[i][0].transcript;
             } else {
-                interimTranscript += event.results[i][0].transcript;
+                interim_transcript += event.results[i][0].transcript;
             }
         }
-        setComposerValue(finalTranscript + interimTranscript);
-      };
-      
-      recognition.onend = () => {
+        // Update the state with the combined result
+        setComposerValue(current_final + interim_transcript);
+    };
+    
+    recognition.onend = () => {
         setMicRecording(false);
-        lastFinalTranscriptRef.current = '';
-      };
-      recognition.onerror = (event: any) => {
-          console.error("Speech recognition error", event.error);
-          setMicRecording(false);
-      }
-      speechRecognitionRef.current = recognition;
+        final_transcript = '';
+    };
+    recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setMicRecording(false);
     }
+    speechRecognitionRef.current = recognition;
     
     return () => {
       if ("speechSynthesis" in window) window.speechSynthesis.cancel();
@@ -427,7 +503,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
         speechRecognitionRef.current.stop();
       }
     };
-  }, [composerValue]);
+  }, []); // Empty dependency array is the key fix.
   
   const updateSessionState = (session: ChatSession) => {
     const newSessions = sessionService.saveSessionsAndReturn(session);
@@ -440,6 +516,11 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
     setSessions(sessionService.loadSessions());
     setSessionOrder(sessionService.loadOrder());
     setCurrentIdState(newSession.id);
+  };
+  
+  const handleSessionSelect = (id: string) => {
+    setCurrentIdState(id);
+    sessionService.setCurrentSessionId(id);
   };
   
   const handlePersonaChange = (persona: Persona) => {
@@ -455,11 +536,14 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
 
   const handleSendMessage = useCallback(async (messageText?: string, isRetry = false) => {
     const messageToSend = (messageText || composerValue).trim();
-    if (!messageToSend || !currentSessionId) return;
+    if ((!messageToSend && !attachedFile) || !currentSessionId) return;
+
+    const fileData = attachedFile ? { name: attachedFile.name, type: attachedFile.type } : undefined;
 
     if (!isRetry) {
         setComposerValue('');
-        const userMsg = sessionService.addMessageToSession(currentSessionId, { role: 'user', content: messageToSend });
+        setAttachedFile(null);
+        const userMsg = sessionService.addMessageToSession(currentSessionId, { role: 'user', content: messageToSend, fileData });
         if (userMsg) updateSessionState(userMsg);
     }
     
@@ -494,21 +578,25 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
         }
         
         const serviceCode = session.meta.code;
+        const history = session.messages.filter(m => m.messageType !== 'wizard' && m.messageType !== 'auth_prompt' && !m.error) || [];
         
         if (serviceCode === 'research') {
             const researchData = await getResearchBrief(messageToSend);
             const botMsg = sessionService.addMessageToSession(currentSessionId, { role: 'model', content: 'Research Brief', messageType: 'research_brief', researchData });
             if(botMsg) updateSessionState(botMsg);
-
+        } else if (serviceCode === 'research-web') {
+            const { text: botResponse, sources, suggestedReplies } = await getGroundedResponse(history, messageToSend);
+            const botMsg = sessionService.addMessageToSession(currentSessionId, { role: 'model', content: botResponse, sources, suggestedReplies });
+            if(botMsg) updateSessionState(botMsg);
         } else {
+            const fileForApi = attachedFile ? { name: attachedFile.name, type: attachedFile.type, content: await fileToBase64(attachedFile) } : undefined;
             const persona = session.meta.persona || 'default';
             const serviceName = serviceCode ? LABELS[serviceCode as ServiceCode] : 'general legal matters';
             const personaInstruction = PERSONAS[persona].instruction;
             const currentUserName = userService.getUserName();
             const systemInstruction = `${personaInstruction} The user's name is ${currentUserName || 'not provided'}. The user is currently interested in the area of: ${serviceName}.`;
             
-            const history = session.messages.filter(m => m.messageType !== 'wizard' && m.messageType !== 'auth_prompt' && !m.error) || [];
-            const { text: botResponse, messageType, suggestedReplies } = await getChatResponse(history, systemInstruction, messageToSend);
+            const { text: botResponse, messageType, suggestedReplies } = await getChatResponse(history, systemInstruction, messageToSend, fileForApi);
             
             const botMsg = sessionService.addMessageToSession(currentSessionId, { role: 'model', content: botResponse, messageType, suggestedReplies });
             if(botMsg) updateSessionState(botMsg);
@@ -526,7 +614,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
     } finally {
         setIsThinking(false);
     }
-  }, [composerValue, currentSessionId, sessions]);
+  }, [composerValue, currentSessionId, sessions, attachedFile]);
   
   const handleRetryMessage = (prompt: string) => {
     if (!currentSessionId) return;
@@ -648,7 +736,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
             sessions={sessions}
             sessionOrder={sessionOrder}
             currentSessionId={currentSessionId}
-            onSessionSelect={setCurrentIdState}
+            onSessionSelect={handleSessionSelect}
             onNewSession={handleCreateNewSession}
         />
 
@@ -686,6 +774,9 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
             isMicRecording={isMicRecording}
             onMicClick={handleMicClick}
             micDisabled={!speechRecognitionRef.current}
+            attachedFile={attachedFile}
+            onFileAttach={setAttachedFile}
+            onFileRemove={() => setAttachedFile(null)}
           />
         </div>
       </div>

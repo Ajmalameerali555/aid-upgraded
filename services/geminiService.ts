@@ -1,4 +1,4 @@
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Type, Part } from "@google/genai";
 import { ChatMessage, Source, MessageType, ResearchBundle, Jurisdiction, VerificationLabel } from '../types';
 import dayjs from "dayjs";
 
@@ -76,13 +76,72 @@ export const getResearchBrief = async (issue: string, forum: Jurisdiction = "ons
     }
 };
 
+export const getGroundedResponse = async (history: ChatMessage[], newMessage: string): Promise<GeminiResponse> => {
+    try {
+        const contents = [...history.map(msg => ({
+            role: msg.role,
+            parts: [{ text: msg.content }]
+        })), { role: 'user', parts: [{ text: newMessage }] }];
 
-export const getChatResponse = async (history: ChatMessage[], systemInstruction: string, newMessage: string): Promise<GeminiResponse> => {
+        const response = await ai.models.generateContent({
+            model,
+            contents,
+            config: {
+                tools: [{ googleSearch: {} }],
+            },
+        });
+
+        const text = response.text;
+        const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+        const sources: Source[] = groundingMetadata?.groundingChunks
+          ?.map((chunk: any) => ({
+            uri: chunk.web?.uri || '',
+            title: chunk.web?.title || 'Untitled Source',
+          }))
+          .filter(source => source.uri) ?? [];
+        
+        // Grounded responses don't have structured suggested replies, so we generate generic ones.
+        const suggestedReplies = ["Tell me more about that.", "What are the key takeaways?", "How does this apply in Abu Dhabi?"];
+
+        return {
+            text,
+            sources,
+            messageType: 'standard',
+            suggestedReplies,
+        };
+
+    } catch (error) {
+        console.error("Error getting grounded response from Gemini:", error);
+        throw new Error("Failed to get a grounded response from the AI.");
+    }
+};
+
+
+export const getChatResponse = async (
+    history: ChatMessage[], 
+    systemInstruction: string, 
+    newMessage: string,
+    file?: { name: string; type: string; content: string; }
+): Promise<GeminiResponse> => {
   try {
-    const contents = [...history.map(msg => ({
-        role: msg.role,
+    // Convert history to Gemini's format
+    // FIX: Explicitly type `contents` to allow for different Part types (text and inlineData).
+    const contents: { role: 'user' | 'model'; parts: Part[] }[] = history.map(msg => ({
+        role: msg.role as 'user' | 'model',
         parts: [{ text: msg.content }]
-    })), { role: 'user', parts: [{ text: newMessage }] }];
+    }));
+
+    // Prepare the new user message with optional file data
+    const userParts: Part[] = [{ text: newMessage }];
+    if (file) {
+        userParts.unshift({
+            inlineData: {
+                mimeType: file.type,
+                data: file.content
+            }
+        });
+    }
+    contents.push({ role: 'user', parts: userParts });
 
     const response = await ai.models.generateContent({
         model,

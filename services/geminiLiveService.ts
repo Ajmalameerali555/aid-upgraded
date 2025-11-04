@@ -1,4 +1,4 @@
-import { GoogleGenAI, LiveServerMessage, Modality, Blob } from "@google/genai";
+import { GoogleGenAI, LiveServerMessage, Modality, Blob, FunctionDeclaration, Type, FunctionCall } from "@google/genai";
 import { TranscriptionTurn } from "../types";
 
 // FIX: Add webkitAudioContext to window type to fix TypeScript errors.
@@ -60,6 +60,13 @@ const getAI = () => {
     return ai;
 };
 
+// --- Function Declarations for Tool Calling ---
+const summarizeFunctionDeclaration: FunctionDeclaration = {
+  name: 'summarizeConversation',
+  description: 'Summarizes the conversation so far. The user must explicitly ask for a summary.',
+  parameters: { type: Type.OBJECT, properties: {} },
+};
+
 let inputAudioContext: AudioContext;
 let outputAudioContext: AudioContext;
 let microphoneStream: MediaStream;
@@ -69,7 +76,8 @@ let sessionPromise: Promise<any>;
 
 export const connect = async (
     onTranscriptionUpdate: (turns: TranscriptionTurn[]) => void,
-    onStateChange: (state: 'connecting' | 'connected' | 'disconnected' | 'error') => void
+    onStateChange: (state: 'connecting' | 'connected' | 'disconnected' | 'error') => void,
+    onToolCall: (calls: FunctionCall[]) => void,
 ) => {
     try {
         onStateChange('connecting');
@@ -107,7 +115,12 @@ export const connect = async (
                     scriptProcessor.connect(inputAudioContext.destination);
                 },
                 onmessage: async (message: LiveServerMessage) => {
-                     // Handle transcription
+                     // Handle tool calls
+                    if (message.toolCall) {
+                        onToolCall(message.toolCall.functionCalls);
+                    }
+
+                    // Handle transcription
                     if (message.serverContent?.outputTranscription) {
                         currentOutputTranscription += message.serverContent.outputTranscription.text;
                     } else if (message.serverContent?.inputTranscription) {
@@ -153,9 +166,10 @@ export const connect = async (
             config: {
                 responseModalities: [Modality.AUDIO],
                 speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } },
-                systemInstruction: 'You are AIDLEX.AE, a friendly and helpful AI legal assistant for the UAE.',
+                systemInstruction: 'You are AIDLEX.AE, a friendly and helpful AI legal assistant for the UAE. You can summarize the conversation if the user asks.',
                 outputAudioTranscription: {},
                 inputAudioTranscription: {},
+                tools: [{ functionDeclarations: [summarizeFunctionDeclaration] }]
             },
         });
     } catch (error) {
@@ -164,10 +178,22 @@ export const connect = async (
     }
 };
 
+export const sendToolResponse = (id: string, name: string, result: any) => {
+    sessionPromise.then((session) => {
+        session.sendToolResponse({
+            functionResponses: { id, name, response: { result } }
+        });
+    });
+};
+
 export const disconnect = async () => {
     if (sessionPromise) {
-       const session = await sessionPromise;
-       session.close();
+       try {
+        const session = await sessionPromise;
+        session.close();
+       } catch (e) {
+        // session might not have been created, ignore error
+       }
     }
     if (microphoneStream) {
         microphoneStream.getTracks().forEach(track => track.stop());

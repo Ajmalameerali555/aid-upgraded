@@ -1,5 +1,3 @@
-
-
 import { ServiceCode, Persona } from './types';
 
 export const LABELS: Record<ServiceCode, string> = {
@@ -10,7 +8,8 @@ export const LABELS: Record<ServiceCode, string> = {
   "5": "—",
   "6": "Business & Administrative",
   "7": "Request Letters & Formatting",
-  "research": "Legal Research",
+  "research": "Structured Legal Research",
+  "research-web": "Web-Grounded Research",
 };
 
 export const PERSONAS: Record<Persona, { name: string; instruction: string }> = {
@@ -56,7 +55,10 @@ export const SERVICE_DETAILS: Record<string, { sub: string; points: string[]; ba
     "6":{ sub:"Company docs • corporate workflows",
       points:["Board resolutions, POAs, MOAs, addenda","KYC packs and banking letters","Share transfers & corporate changes","Compliance calendars and reminders","Bilingual corporate stationery (AR/EN)"],
       badge:"Code 6 • Business & Administrative" },
-    "7":{ sub:"Court/agency letters • bilingual formatting",
+    "7":{ sub:"Purpose‑built letter drafting • bilingual formatting",
       points:["Purpose‑built letter drafting (authority or court)","Evidence indexing and exhibit stamping","Bilingual layouts: AR/EN or dual column","Stamps, seals, and pagination standards","Export to PDF with print‑ready margins"],
-      badge:"Code 7 • Request Letters & Formatting" }
+      badge:"Code 7 • Request Letters & Formatting" },
+    "research-web": { sub: "Live web search for up-to-date legal info",
+      points:["Real-time answers for recent legal changes & news", "Verifiable sources from official UAE domains", "Ideal for queries on current events or trending topics", "Direct links to articles, gazettes, and court updates"],
+      badge:"Research • Web-Grounded" }
   };

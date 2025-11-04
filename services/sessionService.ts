@@ -14,7 +14,6 @@ export const saveOrder = (arr: string[]) => localStorage.setItem(ORDER_KEY, JSON
 export const setCurrentSessionId = (id: string) => localStorage.setItem(CURRENT_KEY, id);
 export const getCurrentSessionId = (): string | null => localStorage.getItem(CURRENT_KEY);
 
-// FIX: Add missing function 'saveSessionsAndReturn' called in ChatUI.tsx
 /**
  * Saves a single session and returns the entire updated sessions object.
  * This is used to persist a locally modified session and update the UI state.

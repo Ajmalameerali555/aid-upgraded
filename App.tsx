@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { LABELS, SERVICE_DETAILS } from './constants';
 import { ServiceCode } from './types';
@@ -76,7 +74,7 @@ const App: React.FC = () => {
                     <header className="w-full">
                         <div className="mx-auto max-w-6xl px-4 py-5 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="size-8 rounded-lg bg-white/10 border border-white/20"></div>
+                                <img src="https://res.cloudinary.com/da7ivvsdj/image/upload/v1762264232/lgo_kzhywq.png" alt="AIDLEX.AE Logo" className="size-8" />
                                 <span className="tracking-widest text-sm uppercase text-gray-300">AIDLEX.AE</span>
                             </div>
                             <nav className="hidden sm:flex items-center gap-3">
@@ -99,9 +97,9 @@ const App: React.FC = () => {
                             <span className="text-xs text-gray-500">Aligned • Structured • Professional</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {Object.entries(LABELS).filter(([code]) => code !== '5' && code !== 'research').map(([code, title]) => (
+                            {Object.entries(LABELS).filter(([code]) => !['5', 'research'].includes(code)).map(([code, title]) => (
                                 <div key={code} className="glass service-card rounded-2xl p-4 h-full">
-                                    <h3 className="font-semibold">{code}) {title}</h3>
+                                    <h3 className="font-semibold">{code.includes('research') ? '' : `${code}) `}{title}</h3>
                                     <p className="mt-1 text-xs text-gray-300 opacity-80">{SERVICE_DETAILS[code]?.sub}</p>
                                     <div className="mt-4 flex items-center gap-2">
                                         <button className="btn btn-ghost" onClick={() => startChat(code as ServiceCode)}>Start Chat</button>
@@ -109,6 +107,14 @@ const App: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
+                             <div className="glass service-card rounded-2xl p-4 h-full flex flex-col">
+                                <h3 className="font-semibold">Legal Research</h3>
+                                <p className="mt-1 text-xs text-gray-300 opacity-80">Structured briefs or live web search</p>
+                                <div className="mt-auto pt-4 flex items-center gap-2">
+                                    <button className="btn btn-ghost !text-xs !px-2 flex-1" onClick={() => startChat('research')}>Structured Brief</button>
+                                    <button className="btn btn-ghost !text-xs !px-2 flex-1" onClick={() => startChat('research-web')}>Web Search</button>
+                                </div>
+                            </div>
                             <div className="glass service-card rounded-2xl p-4 h-full opacity-60">
                                 <h3 className="font-semibold">5) — <span className="text-xs ml-1 opacity-70">(coming soon)</span></h3>
                                 <p className="mt-1 text-xs text-gray-300 opacity-80">Reserved for upcoming module</p>

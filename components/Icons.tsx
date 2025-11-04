@@ -141,3 +141,9 @@ export const UnverifiedIcon: React.FC = () => (
       <line x1="12" y1="17" x2="12.01" y2="17"/>
     </svg>
 );
+
+export const PaperclipIcon: React.FC = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+    </svg>
+);

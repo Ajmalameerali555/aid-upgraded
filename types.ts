@@ -1,4 +1,4 @@
-export type ServiceCode = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "research";
+export type ServiceCode = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "research" | "research-web";
 export type Persona = 'default' | 'mentor' | 'gen-z' | 'court-formal';
 
 export interface Source {
@@ -24,7 +24,7 @@ export interface ResearchBundle {
 }
 
 export interface ChatMessage {
-  role: 'user' | 'model';
+  role: 'user' | 'model' | 'system';
   content: string;
   ts: number;
   sources?: Source[];
@@ -33,6 +33,10 @@ export interface ChatMessage {
   error?: boolean;
   promptForRetry?: string;
   researchData?: ResearchBundle;
+  fileData?: {
+    name: string;
+    type: string;
+  };
 }
 
 export interface ChatSession {
