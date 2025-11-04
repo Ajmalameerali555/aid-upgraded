@@ -37,7 +37,7 @@ export const getResearchBrief = async (issue: string, forum: Jurisdiction = "ons
 
         const response = await ai.models.generateContent({
             model,
-            contents: [{ role: 'user', parts: [{ text: issue }] }],
+            contents: issue,
             config: {
                 systemInstruction: researchSystemInstruction,
                 responseMimeType: "application/json",

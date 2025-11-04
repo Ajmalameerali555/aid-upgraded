@@ -9,8 +9,9 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  // FIX: Refactor to use a constructor for state initialization to resolve issues with `this.props`.
-  // This is a more robust pattern if the build tooling doesn't fully support class property syntax.
+  // FIX: Use a constructor to initialize state and ensure 'this.props' is available, resolving an issue where props were inaccessible in the render method.
+  public state: State;
+
   constructor(props: Props) {
     super(props);
     this.state = {

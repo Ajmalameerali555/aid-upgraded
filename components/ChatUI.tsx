@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ChatSession, ChatMessage, ServiceCode, Persona, Source, ResearchBundle } from '../types';
 import { LABELS, PERSONAS } from '../constants';
 import { getChatResponse, getResearchBrief, getGroundedResponse } from '../services/geminiService';
 import * as sessionService from '../services/sessionService';
+// FIX: Corrected typo in import statement from *s to * as.
 import * as userService from '../services/userService';
 import { ClockIcon, MicIcon, SendIcon, SettingsIcon, PlayIcon, StopIcon, CopyIcon, CheckIcon, UserIcon, TrashIcon, LogoutIcon, ErrorIcon, RetryIcon, PaperclipIcon } from './Icons';
 import ClauseSwapWizard from './ClauseSwapWizard';
@@ -270,7 +271,7 @@ const MessageStream: React.FC<{
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     }, [props.messages, props.isThinking]);
 
     const lastMessage = props.messages[props.messages.length - 1];
@@ -450,6 +451,19 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
   const speechRecognitionRef = useRef<any>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
   const composerValueRef = useRef(composerValue);
+
+  // --- Sound Effects ---
+  const sentSfx = useMemo(() => {
+    const audio = new Audio('data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjQwLjEwMQAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWWgA');
+    audio.volume = 0.2;
+    return audio;
+  }, []);
+  const receivedSfx = useMemo(() => {
+      const audio = new Audio('data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjQwLjEwMQAAAAAAAAAAAAAA//tAwVIAAAAGAAADGGF2YzU2LjYwLjEwMAD/80DEAAAAA0gAAAAATEFNRTMuOTkuNVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//80DEQBwAAANIAAAAAFEVoAoAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAEAAAmGAAB4wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=');
+      audio.volume = 0.3;
+      return audio;
+  }, []);
+
   useEffect(() => {
     composerValueRef.current = composerValue;
   }, [composerValue]);
@@ -483,27 +497,39 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    let final_transcript = '';
+    
+    let baseText = '';
 
     recognition.onstart = () => {
-        final_transcript = composerValueRef.current;
+        baseText = composerValueRef.current;
     };
+
     recognition.onresult = (event: any) => {
         let interim_transcript = '';
-        let current_final = final_transcript;
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
+        let final_transcript = '';
+
+        for (let i = 0; i < event.results.length; ++i) {
+            const transcriptPart = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
-                current_final += event.results[i][0].transcript;
+                final_transcript += transcriptPart;
             } else {
-                interim_transcript += event.results[i][0].transcript;
+                interim_transcript += transcriptPart;
             }
         }
-        setComposerValue(current_final + interim_transcript);
+        
+        let newText = baseText;
+        if (newText && (final_transcript || interim_transcript)) {
+            if (!newText.endsWith(' ')) {
+                newText += ' ';
+            }
+        }
+        newText += final_transcript + interim_transcript;
+
+        setComposerValue(newText);
     };
     
     recognition.onend = () => {
         setMicRecording(false);
-        final_transcript = '';
     };
     recognition.onerror = (event: any) => {
         console.error("Speech recognition error", event.error);
@@ -514,6 +540,10 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
     return () => {
       if ("speechSynthesis" in window) window.speechSynthesis.cancel();
       if (speechRecognitionRef.current) {
+        speechRecognitionRef.current.onstart = null;
+        speechRecognitionRef.current.onresult = null;
+        speechRecognitionRef.current.onend = null;
+        speechRecognitionRef.current.onerror = null;
         speechRecognitionRef.current.stop();
       }
     };
@@ -553,6 +583,8 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
     const messageToSend = (messageText || composerValue).trim();
     if ((!messageToSend && !attachedFile) || !currentSessionId) return;
 
+    try { sentSfx.play().catch(console.warn); } catch (e) {}
+
     const fileData = attachedFile ? { name: attachedFile.name, type: attachedFile.type } : undefined;
 
     if (!isRetry) {
@@ -581,10 +613,14 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
             const name = messageToSend;
             userService.setUserName(name);
             setUserName(name);
+            
+            const welcomeMsg = sessionService.addMessageToSession(currentSessionId, { role: 'model', content: `Thank you, ${name}! It's a pleasure to meet you.` });
+            if (welcomeMsg) {
+                try { receivedSfx.play().catch(console.warn); } catch (e) {}
+                updateSessionState(welcomeMsg);
+            }
 
-            sessionService.addMessageToSession(currentSessionId, { role: 'model', content: `Thank you, ${name}! It's a pleasure to meet you.` });
             const authPromptMsg = sessionService.addMessageToSession(currentSessionId, { role: 'model', content: 'Auth Prompt', messageType: 'auth_prompt' });
-
             if (authPromptMsg) {
                 authPromptMsg.meta.needsOnboarding = false;
                 updateSessionState(authPromptMsg);
@@ -598,11 +634,17 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
         if (serviceCode === 'research') {
             const researchData = await getResearchBrief(messageToSend);
             const botMsg = sessionService.addMessageToSession(currentSessionId, { role: 'model', content: 'Research Brief', messageType: 'research_brief', researchData });
-            if(botMsg) updateSessionState(botMsg);
+            if(botMsg) {
+                try { receivedSfx.play().catch(console.warn); } catch (e) {}
+                updateSessionState(botMsg);
+            }
         } else if (serviceCode === 'research-web') {
             const { text: botResponse, sources, suggestedReplies } = await getGroundedResponse(history, messageToSend);
             const botMsg = sessionService.addMessageToSession(currentSessionId, { role: 'model', content: botResponse, sources, suggestedReplies });
-            if(botMsg) updateSessionState(botMsg);
+            if(botMsg) {
+                try { receivedSfx.play().catch(console.warn); } catch (e) {}
+                updateSessionState(botMsg);
+            }
         } else {
             const fileForApi = attachedFile ? { name: attachedFile.name, type: attachedFile.type, content: await fileToBase64(attachedFile) } : undefined;
             const persona = session.meta.persona || 'default';
@@ -614,7 +656,10 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
             const { text: botResponse, messageType, suggestedReplies } = await getChatResponse(history, systemInstruction, messageToSend, fileForApi);
             
             const botMsg = sessionService.addMessageToSession(currentSessionId, { role: 'model', content: botResponse, messageType, suggestedReplies });
-            if(botMsg) updateSessionState(botMsg);
+            if(botMsg) {
+                try { receivedSfx.play().catch(console.warn); } catch (e) {}
+                updateSessionState(botMsg);
+            }
         }
 
     } catch (error) {
@@ -629,7 +674,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
     } finally {
         setIsThinking(false);
     }
-  }, [composerValue, currentSessionId, sessions, attachedFile]);
+  }, [composerValue, currentSessionId, sessions, attachedFile, sentSfx, receivedSfx]);
   
   const handleRetryMessage = (prompt: string) => {
     if (!currentSessionId) return;
@@ -640,14 +685,32 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
       if (!currentSessionId) return;
       const currentSessions = sessionService.loadSessions();
       const session = currentSessions[currentSessionId];
+      
       if (session) {
+          // Filter out the auth prompt message
           session.messages = session.messages.filter(m => m.messageType !== 'auth_prompt');
+
+          // Add confirmation and follow-up messages
           const confirmationText = status === 'authenticated' 
               ? `Great, ${newName}! You're all signed in. Your chats will now be saved to your profile.` 
               : "Okay, you're continuing as a guest. Your chat history will be saved on this browser only.";
-          sessionService.addMessageToSession(currentSessionId, { role: 'model', content: confirmationText });
-          const finalMsg = sessionService.addMessageToSession(currentSessionId, { role: 'model', content: `How can I help you today?` });
-          if (finalMsg) updateSessionState(finalMsg);
+          
+          session.messages.push({ 
+              role: 'model', 
+              content: confirmationText, 
+              ts: Date.now() 
+          });
+
+          session.messages.push({ 
+              role: 'model', 
+              content: `How can I help you today?`, 
+              ts: Date.now() + 1 // Ensure unique timestamp for React key
+          });
+          
+          try { receivedSfx.play().catch(console.warn); } catch (e) {}
+
+          // Save the fully updated session once and update the UI state
+          updateSessionState(session);
       }
   };
   
@@ -715,7 +778,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(content.replace(/\*\*/g, ""));
     utterance.voice = getBestFemaleVoice(voicesRef.current);
-    utterance.rate = 0.95; // Slightly slower for better clarity and naturalness
+    utterance.rate = 1.0; // Adjusted for a more natural speaking pace
     utterance.pitch = 1.0;
     utterance.onend = () => setSpeakingMessageTs(null);
     setSpeakingMessageTs(ts);
