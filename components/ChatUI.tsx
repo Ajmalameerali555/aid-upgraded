@@ -670,6 +670,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
             const messageIndex = session.messages.findIndex(m => m.ts === messageTs);
             if (messageIndex !== -1) {
                 session.messages[messageIndex].content = finalizedContent;
+                // FIX: Corrected a typo from `message - index` to `messageIndex`.
                 session.messages[messageIndex].messageType = 'standard';
             }
         }
