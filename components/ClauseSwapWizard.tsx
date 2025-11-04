@@ -10,7 +10,8 @@ const ClauseSwapWizard: React.FC<ClauseSwapWizardProps> = ({ templateContent, on
         const matches = templateContent.match(/\<\<([^\>]+)\>\>/g);
         if (!matches) return [];
         // Get unique placeholders, removing the << and >>
-        return [...new Set(matches)].map(p => p.substring(2, p.length - 2));
+        // FIX: Explicitly type `p` as a string to fix error on `substring` and `length`.
+        return [...new Set(matches)].map((p: string) => p.substring(2, p.length - 2));
     }, [templateContent]);
 
     const [values, setValues] = useState<Record<string, string>>(() => 

@@ -29,19 +29,39 @@ interface ChatUIProps {
 // =================================================================================
 const getBestFemaleVoice = (voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
     if (!voices || voices.length === 0) return null;
+
+    const femaleNamesRegex = /female|woman|girl|samantha|zira|siri/i;
+
     const rankedVoices = voices
-        .filter(v => v.lang.startsWith('en') && v.name.match(/female|woman|girl/i))
+        .filter(v => v.lang.startsWith('en')) // Filter for English voices first
         .map(voice => {
             let score = 0;
-            if (voice.name.includes('Google')) score += 5;
-            if (voice.name.includes('Samantha') || voice.name.includes('Zira') || voice.name.includes('Siri')) score += 10;
-            if (!voice.localService) score += 10; // Prioritize cloud-based voices
+            // High score for non-local (likely higher quality cloud-based) voices
+            if (!voice.localService) score += 20;
+            // High score for known high-quality voice names
+            if (voice.name.includes('Google')) score += 15;
+            if (femaleNamesRegex.test(voice.name)) score += 10;
+            // Prefer US and GB English
+            if (voice.lang === 'en-US' || voice.lang === 'en-GB') score += 5;
+            // Bonus for being the default voice
             if (voice.default) score += 2;
+            
             return { voice, score };
         })
+        .filter(item => item.score > 0) // Only consider voices that met some criteria
         .sort((a, b) => b.score - a.score);
+    
+    if (rankedVoices.length > 0) return rankedVoices[0].voice;
 
-    return rankedVoices.length > 0 ? rankedVoices[0].voice : (voices.find(v => v.lang.startsWith('en-US')) || null);
+    // Fallback strategy:
+    const defaultEnVoice = voices.find(v => v.default && v.lang.startsWith('en'));
+    if (defaultEnVoice) return defaultEnVoice;
+    
+    const anyUSVoice = voices.find(v => v.lang === 'en-US');
+    if (anyUSVoice) return anyUSVoice;
+    
+    const firstEnVoice = voices.find(v => v.lang.startsWith('en'));
+    return firstEnVoice || null;
 };
 
 const highlightMatches = (text: string, searchTerm: string): string => {
@@ -250,10 +270,7 @@ const MessageStream: React.FC<{
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (containerRef.current) {
-            // More reliable scrolling by directly manipulating scroll position
-            containerRef.current.scrollTop = containerRef.current.scrollHeight;
-        }
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [props.messages, props.isThinking]);
 
     const lastMessage = props.messages[props.messages.length - 1];
@@ -698,7 +715,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(content.replace(/\*\*/g, ""));
     utterance.voice = getBestFemaleVoice(voicesRef.current);
-    utterance.rate = 1.0;
+    utterance.rate = 0.95; // Slightly slower for better clarity and naturalness
     utterance.pitch = 1.0;
     utterance.onend = () => setSpeakingMessageTs(null);
     setSpeakingMessageTs(ts);
