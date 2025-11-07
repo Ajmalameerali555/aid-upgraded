@@ -9,14 +9,13 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  // FIX: Use a constructor to initialize state and ensure 'this.props' is available, resolving an issue where props were inaccessible in the render method.
-  public state: State;
-
+  // Reverted to a standard constructor for state initialization.
+  // The class field syntax can sometimes cause type inference issues with certain build setups,
+  // which might have been the cause of `this.props` not being recognized.
+  // A constructor is a more robust and compatible approach.
   constructor(props: Props) {
     super(props);
-    this.state = {
-      hasError: false,
-    };
+    this.state = { hasError: false };
   }
 
   static getDerivedStateFromError(_: Error): State {

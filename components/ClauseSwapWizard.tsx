@@ -10,7 +10,6 @@ const ClauseSwapWizard: React.FC<ClauseSwapWizardProps> = ({ templateContent, on
         const matches = templateContent.match(/\<\<([^\>]+)\>\>/g);
         if (!matches) return [];
         // Get unique placeholders, removing the << and >>
-        // FIX: Explicitly type `p` as a string to fix error on `substring` and `length`.
         return [...new Set(matches)].map((p: string) => p.substring(2, p.length - 2));
     }, [templateContent]);
 
@@ -45,12 +44,13 @@ const ClauseSwapWizard: React.FC<ClauseSwapWizardProps> = ({ templateContent, on
                 <div className="space-y-3">
                     {placeholders.map(p => (
                         <div key={p}>
-                            <label className="text-xs text-gray-400 block mb-1">{formatLabel(p)}</label>
+                            <label htmlFor={p} className="text-xs text-gray-400 block mb-1">{formatLabel(p)}</label>
                             <input
+                                id={p}
                                 type="text"
                                 value={values[p]}
                                 onChange={(e) => handleInputChange(p, e.target.value)}
-                                className="input w-full rounded-md px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-purple-400"
+                                className="input w-full rounded-md px-3 py-1.5 text-base outline-none focus:ring-2 focus:ring-purple-400"
                             />
                         </div>
                     ))}

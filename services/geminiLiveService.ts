@@ -1,7 +1,7 @@
 import { GoogleGenAI, LiveServerMessage, Modality, Blob, FunctionDeclaration, Type, FunctionCall } from "@google/genai";
 import { TranscriptionTurn } from "../types";
 
-// FIX: Add webkitAudioContext to window type to fix TypeScript errors.
+// Add webkitAudioContext to window type to fix TypeScript errors for cross-browser compatibility.
 declare global {
   interface Window {
     webkitAudioContext: typeof AudioContext;
@@ -71,7 +71,7 @@ let inputAudioContext: AudioContext;
 let outputAudioContext: AudioContext;
 let microphoneStream: MediaStream;
 let scriptProcessor: ScriptProcessorNode;
-// FIX: The `LiveSession` type is not exported from the '@google/genai' package. Using `any` as a workaround.
+// The `LiveSession` type is not exported from the '@google/genai' package. Using 'any' as a workaround.
 let sessionPromise: Promise<any>;
 
 export const connect = async (
@@ -103,8 +103,13 @@ export const connect = async (
                     
                     scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
                         const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                        const l = inputData.length;
+                        const int16 = new Int16Array(l);
+                        for (let i = 0; i < l; i++) {
+                            int16[i] = inputData[i] * 32768;
+                        }
                         const pcmBlob: Blob = {
-                            data: encode(new Uint8Array(new Int16Array(inputData.map(x => x * 32768)).buffer)),
+                            data: encode(new Uint8Array(int16.buffer)),
                             mimeType: 'audio/pcm;rate=16000',
                         };
                         sessionPromise.then((session) => {

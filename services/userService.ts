@@ -1,7 +1,6 @@
 const USER_NAME_KEY = "aidlex_user_name";
 const AUTH_STATUS_KEY = "aidlex_auth_status";
 const USER_EMAIL_KEY = "aidlex_user_email";
-const USER_MOBILE_KEY = "aidlex_user_mobile";
 
 
 export type AuthStatus = 'guest' | 'authenticated';
@@ -59,12 +58,10 @@ export const setAuthStatus = (status: AuthStatus): void => {
 /**
  * Saves the user's contact information to local storage.
  * @param email The user's email.
- * @param mobile The user's mobile number.
  */
-export const setUserContactInfo = (email: string, mobile: string): void => {
+export const setUserContactInfo = (email: string): void => {
     try {
         localStorage.setItem(USER_EMAIL_KEY, email);
-        localStorage.setItem(USER_MOBILE_KEY, mobile);
     } catch (error) {
         console.error("Could not access local storage to set user contact info:", error);
     }
@@ -78,7 +75,6 @@ export const logoutUser = (): void => {
         localStorage.removeItem(USER_NAME_KEY);
         localStorage.removeItem(AUTH_STATUS_KEY);
         localStorage.removeItem(USER_EMAIL_KEY);
-        localStorage.removeItem(USER_MOBILE_KEY);
     } catch (error) {
         console.error("Could not access local storage to log out user:", error);
     }

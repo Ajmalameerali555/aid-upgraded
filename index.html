@@ -21,8 +21,8 @@
       --pill-border: rgba(255,255,255,.15);
     }
 
-    /* Base scale tightened (fix "zoomed" look) */
-    html{ font-size: 15px; }
+    /* Set base font-size to 16px to prevent iOS auto-zoom on input focus */
+    html{ font-size: 16px; }
     body{
       margin: 0;
       background-color: #0f0f0f;
@@ -55,7 +55,7 @@
     mark { background-color: rgba(255, 255, 255, 0.1); color: inherit; border-radius: 3px; padding: 0 2px; }
 
     /* Buttons */
-    .btn{ padding:.8rem 1rem; border-radius:.8rem; font-weight:600; transition: transform .1s, box-shadow .2s, background .2s, color .2s }
+    .btn{ padding:.5rem 1rem; border-radius:.8rem; font-weight:600; transition: transform .1s, box-shadow .2s, background .2s, color .2s }
     .btn:active{ transform: scale(.98) }
     .btn-primary{ background:#fff; color:#000 }
     .btn-primary:hover{ box-shadow:0 8px 22px rgba(255,255,255,.18) }
@@ -185,6 +185,19 @@
     /* Reduced motion */
     @media (prefers-reduced-motion: reduce){
       .typewriter h1, .fade-in, .msg-animated, .service-card { animation:none !important; opacity:1 !important; transform: none !important; }
+    }
+
+    /* Accessibility helper class */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
     }
   </style>
 <script type="importmap">
