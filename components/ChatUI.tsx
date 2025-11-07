@@ -11,7 +11,7 @@ import ResearchBrief from './ResearchBrief';
 import WaveformVisualizer from './WaveformVisualizer';
 
 // =================================================================================
-// TYPE DECLARATIONS
+// TYPE DECLARations
 // =================================================================================
 declare global {
   interface Window {
@@ -846,7 +846,7 @@ const ChatUI: React.FC<ChatUIProps> = ({ onClose, initialSessionId }) => {
                     onNewSession={handleNewSession}
                 />
                 
-                <main role="main" className="flex flex-col h-full bg-black/10">
+                <main role="main" className="flex flex-col h-full bg-black/10 overflow-hidden">
                     <ChatHeader
                         authStatus={authStatus}
                         userName={userName}
